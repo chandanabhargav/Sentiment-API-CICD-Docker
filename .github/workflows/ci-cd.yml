@@ -1,0 +1,48 @@
+name: CI/CD for Sentiment API
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -r app/requirements.txt
+
+    - name: Run tests
+      run: |
+        pip install pytest
+        pytest app/test_main.py
+
+    - name: Run API health check
+      run: |
+        uvicorn app.main:app --host 127.0.0.1 --port 8000 &
+        sleep 5
+        curl --fail http://127.0.0.1:8000/docs
+
+    - name: Build Docker image
+      run: docker build -t sentiment-api .
+
+    - name: Log in to DockerHub
+      env:
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
+    - name: Tag and push Docker image
+      run: |
+        docker tag sentiment-api ${{ secrets.DOCKER_USERNAME }}/sentiment-api:latest
+        docker push ${{ secrets.DOCKER_USERNAME }}/sentiment-api:latest

@@ -25,7 +25,7 @@ jobs:
     - name: Run API health check
       run: |
         uvicorn app.main:app --host 127.0.0.1 --port 8000 &
-        sleep 5
+        sleep 15
         curl --fail http://127.0.0.1:8000/docs
 
     - name: Build Docker image
